@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: stanichno-luganskiy-dk
+    runtime: static
+    buildCommand: echo "Static site ready"
+    staticPublishPath: .
