@@ -55,6 +55,11 @@
     </div>
   </header>
 
+  <div class="speech-panel" id="speechPanel" hidden>
+    <p id="speechHint" role="status">Нажмите на карточку или текстовый блок, чтобы прослушать его.</p>
+    <button id="speechStop" type="button">Остановить чтение</button>
+  </div>
+
   <main id="main">
     <section class="hero">
       <div class="hero-grid container">
@@ -120,7 +125,7 @@
         <div class="studio-list">
           <a class="studio-item studio-large reveal" href="https://vk.com/wall-223557713_17873" target="_blank" rel="noopener">
             <img src="images/studio-kruzheva.jpg" alt="Оформление ансамбля казачьей песни «Кружева»">
-            <span class="studio-number">01</span><div><small>Казачья песня · идёт набор</small><h3>Ансамбль «Кружева»</h3></div><i>↗</i>
+            <span class="studio-number">01</span><div><small>Казачья песня</small><h3>Ансамбль «Кружева»</h3></div><i>↗</i>
           </a>
           <a class="studio-item reveal" href="https://vk.com/wall-223557713_25527" target="_blank" rel="noopener">
             <img src="images/studio-flanking.jpg" alt="Коллектив фланкировщиков Станично-Луганского дворца культуры">
@@ -230,7 +235,7 @@
     <button class="dialog-close" id="adminClose" type="button" aria-label="Закрыть">×</button>
     <p class="eyebrow">Служебный раздел</p>
     <h2 id="adminTitle">Вход для администратора</h2>
-    <p>Панель управления должна быть подключена к защищённому серверу. Данные этой формы не сохраняются и не отправляются.</p>
+    <p>Войдите, чтобы управлять содержимым сайта. Логин и пароль проверяются на сервере.</p>
     <form id="adminForm">
       <label>Логин<input type="text" name="username" autocomplete="username" required></label>
       <label>Пароль<input type="password" name="password" autocomplete="current-password" required></label>
@@ -239,6 +244,23 @@
     </form>
   </dialog>
 
+  <dialog class="admin-dialog settings-dialog" id="settingsDialog" aria-labelledby="settingsTitle">
+    <button class="dialog-close" id="settingsClose" type="button" aria-label="Закрыть">×</button>
+    <p class="eyebrow">Панель администратора</p>
+    <h2 id="settingsTitle">Настройки сайта</h2>
+    <p>Редактируйте тексты, ссылки, изображения и цвета. Для изображений укажите путь к файлу в папке images.</p>
+    <form id="settingsForm">
+      <div id="settingsFields"></div>
+      <div class="settings-actions">
+        <button class="button button-primary" type="submit">Сохранить изменения</button>
+        <button class="settings-logout" id="settingsLogout" type="button">Выйти</button>
+      </div>
+      <p class="admin-status" id="settingsStatus" role="status"></p>
+    </form>
+  </dialog>
+
+  <script src="content.js"></script>
   <script src="script.js"></script>
+  <script src="admin.js"></script>
 </body>
 </html>

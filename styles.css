@@ -23,6 +23,7 @@ body.accessible * { animation: none !important; }
 a { color: inherit; }
 button { font: inherit; }
 img { max-width: 100%; }
+[hidden] { display: none !important; }
 .container { width: min(var(--container), calc(100% - 48px)); margin: 0 auto; }
 .skip-link { position: fixed; z-index: 200; left: 12px; top: -100px; padding: 12px 18px; color: white; background: var(--pine); }
 .skip-link:focus { top: 12px; }
@@ -46,6 +47,9 @@ img { max-width: 100%; }
 .vision-button[aria-pressed="true"] { color: white; background: var(--pine); }
 .menu-button { display: none; width: 42px; height: 42px; padding: 0; border: 0; border-radius: 50%; background: var(--pine); }
 .menu-button span { display: block; width: 18px; height: 2px; margin: 4px auto; background: white; }
+.speech-panel { position: fixed; z-index: 110; right: 20px; bottom: 20px; max-width: min(420px, calc(100% - 40px)); padding: 16px 18px; display: flex; align-items: center; gap: 16px; color: white; border-radius: 18px; background: var(--pine); box-shadow: 0 12px 36px rgba(8,28,34,.25); }
+.speech-panel p { margin: 0; font-size: 12px; line-height: 1.4; }
+.speech-panel button { flex: none; padding: 8px 10px; color: var(--pine-dark); border: 0; border-radius: 10px; background: var(--amber); font-size: 11px; font-weight: 700; cursor: pointer; }
 
 .hero { position: relative; overflow: hidden; background: var(--paper); }
 .hero-grid { min-height: 680px; display: grid; grid-template-columns: .93fr 1.07fr; align-items: center; gap: 7%; padding-top: 60px; padding-bottom: 78px; }
@@ -194,6 +198,17 @@ img { max-width: 100%; }
 .admin-dialog label { display: grid; gap: 7px; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; }
 .admin-dialog input { min-height: 48px; padding: 0 14px; color: var(--ink); border: 1px solid var(--line); border-radius: 12px; background: white; font: inherit; }
 .admin-status { min-height: 20px; margin: 0; color: var(--clay); font-size: 11px; line-height: 1.5; }
+.settings-dialog { width: min(900px, calc(100% - 32px)); max-height: min(88vh, 900px); overflow: auto; }
+.settings-dialog h2 { padding-right: 32px; }
+.settings-group { padding: 6px 0; border-top: 1px solid var(--line); }
+.settings-group summary { padding: 14px 0; font-weight: 800; cursor: pointer; }
+.settings-group .setting-field { margin: 12px 0 18px; text-transform: none; letter-spacing: 0; }
+.setting-field span { overflow-wrap: anywhere; }
+.setting-field textarea { min-height: 100px; padding: 12px 14px; resize: vertical; color: var(--ink); border: 1px solid var(--line); border-radius: 12px; background: white; font: 13px/1.5 "Onest", Arial, sans-serif; }
+.setting-field input { font-size: 13px; font-weight: 400; }
+.setting-field input[type="color"] { width: 100%; padding: 5px; cursor: pointer; }
+.settings-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 18px; }
+.settings-logout { padding: 12px; color: var(--clay); border: 0; background: transparent; font-weight: 700; cursor: pointer; }
 
 @keyframes ticker { to { transform: translateX(-50%); } }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .reveal { opacity: 1; transform: none; transition: none; } .hero-ticker div { animation: none; } }
@@ -223,4 +238,5 @@ img { max-width: 100%; }
   .quote-section { padding: 65px 0; }.quote-inner { grid-template-columns: 1fr; }.quote-inner img { width: 65px; height: 65px; }.quote-inner blockquote { font-size: 30px; }
   .contact-card, .channel-card { padding: 27px; }.contact-line > a:not(.large-contact) { position: static; }.large-contact { font-size: 18px; word-break: break-word; }.channel-card { min-height: 250px; }.channel-card img { right: 24px; width: 72px; height: 72px; }.channel-card h3 { font-size: 24px; }.admin-dialog { padding: 30px 22px; }.admin-dialog h2 { font-size: 25px; }
   .sources-inner { grid-template-columns: 1fr; gap: 15px; }.footer-top { align-items: flex-start; }.footer-top nav { display: none; }.to-top { margin-left: auto; }.footer-bottom { flex-direction: column; gap: 11px; }
+  .speech-panel { right: 12px; bottom: 12px; left: 12px; max-width: none; flex-wrap: wrap; }
 }
