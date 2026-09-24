@@ -10,6 +10,6 @@
 
 `render.yaml` описывает новый Node web service `stanichno-luganskiy-dk-app`. Существующий статический сервис нужно заменить серверным после проверки нового адреса; статический сервис не может проверить пароль или сохранить настройки.
 
-При создании Blueprint в Render укажите секретные переменные `ADMIN_PASSWORD_HASH` и `CONTENT_GITHUB_TOKEN`. Для `CONTENT_GITHUB_TOKEN` создайте **отдельный fine-grained GitHub token** с доступом только к репозиторию `McBah1979/culture-palace` и правом **Contents: Read and write**. Render автоматически создаст `SESSION_SECRET`; остальные настройки перечислены в `render.yaml`. Не добавляйте токен и пароль в файлы репозитория.
+При создании Blueprint в Render укажите секретные переменные `ADMIN_LOGIN`, `ADMIN_PASSWORD` и `CONTENT_GITHUB_TOKEN`. Для `CONTENT_GITHUB_TOKEN` создайте **отдельный fine-grained GitHub token** с доступом только к репозиторию `McBah1979/culture-palace` и правом **Contents: Read and write**. Render автоматически создаст `SESSION_SECRET`; остальные настройки перечислены в `render.yaml`. Не добавляйте токен и пароль в файлы репозитория.
 
 После запуска откройте сайт и нажмите «Администратору». В редакторе доступны тексты существующих блоков, ссылки, пути к изображениям из `images/` и цвета. Сохранение меняет `site-content.json` в GitHub; обновление публичной версии может занять до 30 секунд. Для замены изображения новым файлом сначала добавьте этот файл в `images/` репозитория, затем укажите его путь в редакторе.

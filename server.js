@@ -114,7 +114,13 @@ function createServer(env = process.env) {
   }
 
   function passwordMatches(password) {
-    if (!env.ADMIN_PASSWORD_HASH || typeof password !== 'string' || password.length > 256) return false;
+    if (typeof password !== 'string' || password.length > 256) return false;
+    if (env.ADMIN_PASSWORD) {
+      const supplied = Buffer.from(password);
+      const expected = Buffer.from(env.ADMIN_PASSWORD);
+      return supplied.length === expected.length && crypto.timingSafeEqual(supplied, expected);
+    }
+    if (!env.ADMIN_PASSWORD_HASH) return false;
     const [salt, hash] = env.ADMIN_PASSWORD_HASH.split(':');
     if (!/^[0-9a-f]{32}$/.test(salt || '') || !/^[0-9a-f]{128}$/.test(hash || '')) return false;
     const derived = crypto.scryptSync(password, Buffer.from(salt, 'hex'), 64);
@@ -135,12 +141,12 @@ function createServer(env = process.env) {
       }
       if (pathname === '/api/admin/login' && req.method === 'POST') {
         if (!sameOrigin(req)) return json(res, 403, { error: 'Недопустимый источник запроса.' });
-        if (!secret || !env.ADMIN_PASSWORD_HASH) return json(res, 503, { error: 'Авторизация не настроена на сервере.' });
+        if (!secret || (!env.ADMIN_PASSWORD && !env.ADMIN_PASSWORD_HASH)) return json(res, 503, { error: 'Авторизация не настроена на сервере.' });
         const address = req.socket.remoteAddress;
         const record = attempts.get(address) || { count: 0, until: 0 };
         if (record.until > Date.now()) return json(res, 429, { error: 'Слишком много попыток. Повторите позднее.' });
         const credentials = await body(req);
-        if (credentials.username !== (env.ADMIN_USERNAME || 'dk-admin') || !passwordMatches(credentials.password)) {
+        if (credentials.username !== (env.ADMIN_LOGIN || env.ADMIN_USERNAME || 'dk-admin') || !passwordMatches(credentials.password)) {
           record.count++;
           if (record.count >= 5) { record.until = Date.now() + 15 * 60 * 1000; record.count = 0; }
           attempts.set(address, record);

@@ -12,7 +12,8 @@ test('admin settings require login and CSRF, then persist for visitors', async (
   const hash = crypto.scryptSync('test-password', Buffer.from(salt, 'hex'), 64).toString('hex');
   const server = createServer({
     CONTENT_FILE: path.join(directory, 'content.json'),
-    ADMIN_USERNAME: 'dk-admin',
+    ADMIN_LOGIN: 'dk-admin',
+    ADMIN_PASSWORD: 'test-password',
     ADMIN_PASSWORD_HASH: `${salt}:${hash}`,
     SESSION_SECRET: crypto.randomBytes(32).toString('hex')
   });

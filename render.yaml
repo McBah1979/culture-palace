@@ -8,9 +8,9 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: ADMIN_USERNAME
-        value: dk-admin
-      - key: ADMIN_PASSWORD_HASH
+      - key: ADMIN_LOGIN
+        sync: false
+      - key: ADMIN_PASSWORD
         sync: false
       - key: SESSION_SECRET
         generateValue: true
