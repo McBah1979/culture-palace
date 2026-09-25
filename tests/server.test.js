@@ -26,6 +26,7 @@ test('admin settings require login and CSRF, then persist for visitors', async (
     assert.equal((await request('/server.js')).status, 404);
     assert.equal((await request('/api/admin/content')).status, 401);
     assert.equal((await request('/api/admin/content', { method: 'PUT', body: JSON.stringify(data) })).status, 401);
+    assert.equal((await request('/api/admin/images', { method: 'POST', body: '{}' })).status, 401);
     assert.equal((await request('/api/admin/login', { method: 'POST', headers: { Origin: 'https://other.example' }, body: JSON.stringify({ username: 'dk-admin', password: 'test-password' }) })).status, 403);
     assert.equal((await request('/api/admin/login', { method: 'POST', body: JSON.stringify({ username: 'dk-admin', password: 'wrong' }) })).status, 401);
     const login = await request('/api/admin/login', { method: 'POST', body: JSON.stringify({ username: 'dk-admin', password: 'test-password' }) });
@@ -33,6 +34,19 @@ test('admin settings require login and CSRF, then persist for visitors', async (
     const cookie = login.headers.get('set-cookie').split(';')[0];
     const { csrf } = await login.json();
     assert.equal((await request('/api/admin/content', { method: 'PUT', headers: { Cookie: cookie }, body: JSON.stringify(data) })).status, 403);
+    assert.equal((await request('/api/admin/images', { method: 'POST', headers: { Cookie: cookie }, body: '{}' })).status, 403);
+    const imageHeaders = { Cookie: cookie, 'X-CSRF-Token': csrf };
+    const upload = (name, bytes) => request('/api/admin/images', { method: 'POST', headers: imageHeaders, body: JSON.stringify({ name, data: bytes.toString('base64') }) });
+    const png = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 0]);
+    assert.equal((await upload('bad.jpg', png)).status, 400);
+    assert.equal((await upload('bad.png', Buffer.alloc(2 * 1024 * 1024 + 1, 0))).status, 400);
+    const image = await upload('good.png', png);
+    assert.equal(image.status, 201);
+    const imagePath = (await image.json()).path;
+    assert.match(imagePath, /^images\/upload-[0-9a-f-]+\.png$/);
+    const fetchedImage = await request(`/${imagePath}`);
+    assert.equal(fetchedImage.status, 200);
+    assert.deepEqual(Buffer.from(await fetchedImage.arrayBuffer()), png);
     assert.equal((await request('/api/admin/content', { method: 'PUT', headers: { Cookie: cookie, 'X-CSRF-Token': csrf }, body: JSON.stringify({ ...data, links: { 'main:0': 'javascript:alert(1)' } }) })).status, 400);
     assert.equal((await request('/api/admin/content', { method: 'PUT', headers: { Cookie: cookie, 'X-CSRF-Token': csrf }, body: JSON.stringify(data) })).status, 200);
     assert.deepEqual(await (await request('/api/content')).json(), data);

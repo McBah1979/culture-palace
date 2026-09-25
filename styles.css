@@ -207,6 +207,7 @@ img { max-width: 100%; }
 .setting-field textarea { min-height: 100px; padding: 12px 14px; resize: vertical; color: var(--ink); border: 1px solid var(--line); border-radius: 12px; background: white; font: 13px/1.5 "Onest", Arial, sans-serif; }
 .setting-field input { font-size: 13px; font-weight: 400; }
 .setting-field input[type="color"] { width: 100%; padding: 5px; cursor: pointer; }
+.setting-field .image-picker { width: 100%; min-height: 0; padding: 10px; cursor: pointer; }
 .settings-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 18px; }
 .settings-logout { padding: 12px; color: var(--clay); border: 0; background: transparent; font-weight: 700; cursor: pointer; }
 

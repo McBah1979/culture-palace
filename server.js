@@ -5,7 +5,8 @@ const crypto = require('node:crypto');
 
 const root = __dirname;
 const defaults = { texts: {}, links: {}, images: {}, colors: {} };
-const contentTypes = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.jpg': 'image/jpeg' };
+const contentTypes = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.jpg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp' };
+const imagePath = /^images\/[a-z0-9-]+\.(jpg|png|webp)$/;
 
 function createServer(env = process.env) {
   const attempts = new Map();
@@ -42,13 +43,13 @@ function createServer(env = process.env) {
     try { return new URL(req.headers.origin).host === req.headers.host; } catch { return false; }
   }
 
-  async function body(req) {
-    if (Number(req.headers['content-length']) > 200000) throw new Error('Слишком большой запрос.');
+  async function body(req, limit = 200000) {
+    if (Number(req.headers['content-length']) > limit) throw new Error('Слишком большой запрос.');
     const parts = [];
     let size = 0;
     for await (const chunk of req) {
       size += chunk.length;
-      if (size > 200000) throw new Error('Слишком большой запрос.');
+      if (size > limit) throw new Error('Слишком большой запрос.');
       parts.push(chunk);
     }
     return JSON.parse(Buffer.concat(parts).toString('utf8'));
@@ -64,7 +65,7 @@ function createServer(env = process.env) {
         if (!/^(main|footer|header):(?:\d+\.)*\d+$|^--[a-z-]+$/.test(key) || typeof text !== 'string' || text.length > 4000) return false;
         if (group === 'colors' && !/^#[0-9a-fA-F]{6}$/.test(text)) return false;
         if (group === 'links' && !/^(https:\/\/[^\s]+|mailto:[^\s]+|tel:[+\d -]+|#[a-zA-Z0-9_-]+)$/.test(text)) return false;
-        if (group === 'images' && !/^images\/[a-zA-Z0-9-]+\.(jpg|jpeg|png|webp)$/.test(text)) return false;
+        if (group === 'images' && !imagePath.test(text)) return false;
       }
     }
     return true;
@@ -79,6 +80,43 @@ function createServer(env = process.env) {
     if (!response.ok) throw new Error(`GitHub returned ${response.status}`);
     const result = await response.json();
     return { data: JSON.parse(Buffer.from(result.content.replace(/\s/g, ''), 'base64').toString('utf8')), sha: result.sha };
+  }
+
+  async function githubImage(file) {
+    if (!/^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/.test(env.CONTENT_GITHUB_REPO || '')) throw new Error('Репозиторий изображений не настроен.');
+    const response = await fetch(`https://api.github.com/repos/${env.CONTENT_GITHUB_REPO}/contents/${file}`, {
+      headers: { 'Accept': 'application/vnd.github+json', 'User-Agent': 'culture-palace-admin', ...(env.CONTENT_GITHUB_TOKEN ? { Authorization: `Bearer ${env.CONTENT_GITHUB_TOKEN}` } : {}) }
+    });
+    if (!response.ok) return null;
+    const item = await response.json();
+    return Buffer.from(item.content.replace(/\s/g, ''), 'base64');
+  }
+
+  async function uploadImage(value) {
+    const invalid = (message) => { const error = new Error(message); error.status = 400; throw error; };
+    if (!value || typeof value !== 'object' || typeof value.name !== 'string' || typeof value.data !== 'string') invalid('Неверный формат изображения.');
+    const extension = path.extname(value.name).toLowerCase();
+    if (!['.jpg', '.jpeg', '.png', '.webp'].includes(extension) || !/^[A-Za-z0-9+/]+={0,2}$/.test(value.data)) invalid('Выберите JPG, PNG или WebP.');
+    const bytes = Buffer.from(value.data, 'base64');
+    if (bytes.length === 0 || bytes.length > 2 * 1024 * 1024) invalid('Размер фото должен быть не более 2 МБ.');
+    const jpg = bytes.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff]));
+    const png = bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+    const webp = bytes.toString('ascii', 0, 4) === 'RIFF' && bytes.toString('ascii', 8, 12) === 'WEBP';
+    if (!((jpg && ['.jpg', '.jpeg'].includes(extension)) || (png && extension === '.png') || (webp && extension === '.webp'))) invalid('Расширение и содержимое файла не совпадают.');
+    const file = `images/upload-${crypto.randomUUID()}.${extension === '.jpeg' ? 'jpg' : extension.slice(1)}`;
+    if (env.CONTENT_FILE) {
+      await fs.mkdir(path.join(path.dirname(env.CONTENT_FILE), 'images'), { recursive: true });
+      await fs.writeFile(path.join(path.dirname(env.CONTENT_FILE), file), bytes, { flag: 'wx' });
+    } else {
+      if (!env.CONTENT_GITHUB_REPO || !env.CONTENT_GITHUB_TOKEN) throw new Error('Для загрузки настройте CONTENT_GITHUB_TOKEN в Render.');
+      const response = await fetch(`https://api.github.com/repos/${env.CONTENT_GITHUB_REPO}/contents/${file}`, {
+        method: 'PUT',
+        headers: { 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json', 'User-Agent': 'culture-palace-admin', Authorization: `Bearer ${env.CONTENT_GITHUB_TOKEN}` },
+        body: JSON.stringify({ message: `Add photo ${file} from admin panel`, content: bytes.toString('base64'), branch: 'main' })
+      });
+      if (!response.ok) throw new Error(`GitHub не загрузил фото (${response.status}).`);
+    }
+    return file;
   }
 
   async function readContent() {
@@ -170,6 +208,10 @@ function createServer(env = process.env) {
           await saveContent(data);
           return json(res, 200, { saved: true });
         }
+        if (pathname === '/api/admin/images' && req.method === 'POST') {
+          const data = await body(req, 3 * 1024 * 1024);
+          return json(res, 201, { path: await uploadImage(data) });
+        }
         if (pathname === '/api/admin/logout' && req.method === 'POST') {
           sessions.delete(current.id);
           res.setHeader('Set-Cookie', 'admin_session=; HttpOnly; SameSite=Strict; Path=/api/admin; Max-Age=0');
@@ -183,14 +225,22 @@ function createServer(env = process.env) {
       if (pathname.startsWith('/api/')) return json(res, 404, { error: 'Не найдено.' });
       if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, 405, { error: 'Недопустимый метод.' });
       const file = pathname === '/' ? 'index.html' : pathname.slice(1);
-      if (!/^(index\.html|styles\.css|script\.js|content\.js|admin\.js|images\/[a-z0-9-]+\.jpg)$/.test(file)) return json(res, 404, { error: 'Не найдено.' });
+      if (!/^(index\.html|styles\.css|script\.js|content\.js|admin\.js)$/.test(file) && !imagePath.test(file)) return json(res, 404, { error: 'Не найдено.' });
       let bytes;
-      try { bytes = await fs.readFile(path.join(root, file)); } catch { return json(res, 404, { error: 'Не найдено.' }); }
+      try { bytes = await fs.readFile(path.join(root, file)); } catch {
+        if (!imagePath.test(file) || !file.startsWith('images/upload-')) return json(res, 404, { error: 'Не найдено.' });
+        if (env.CONTENT_FILE) {
+          try { bytes = await fs.readFile(path.join(path.dirname(env.CONTENT_FILE), file)); } catch { return json(res, 404, { error: 'Не найдено.' }); }
+        } else {
+          bytes = await githubImage(file);
+          if (!bytes) return json(res, 404, { error: 'Не найдено.' });
+        }
+      }
       res.writeHead(200, { 'Content-Type': contentTypes[path.extname(file)], 'Cache-Control': 'public, max-age=300' });
       res.end(req.method === 'HEAD' ? undefined : bytes);
     } catch (error) {
-      console.error(error);
-      json(res, error instanceof SyntaxError ? 400 : 503, { error: error instanceof SyntaxError ? 'Некорректный JSON.' : 'Сервис временно недоступен.' });
+      if (!error.status && !(error instanceof SyntaxError)) console.error(error);
+      json(res, error instanceof SyntaxError ? 400 : error.status || 503, { error: error instanceof SyntaxError ? 'Некорректный JSON.' : error.status ? error.message : 'Сервис временно недоступен.' });
     }
   });
 }

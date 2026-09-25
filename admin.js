@@ -25,6 +25,33 @@ function editableField(group, label, key, value, type = 'text') {
   input.dataset.group = group;
   input.value = value;
   wrapper.append(heading, input);
+  if (group === 'images') {
+    const picker = document.createElement('input');
+    picker.type = 'file';
+    picker.accept = 'image/jpeg,image/png,image/webp';
+    picker.className = 'image-picker';
+    picker.removeAttribute('name');
+    picker.addEventListener('change', async () => {
+      const file = picker.files?.[0];
+      if (!file) return;
+      if (file.size > 2 * 1024 * 1024) { settingsStatus.textContent = 'Фото должно быть не больше 2 МБ.'; picker.value = ''; return; }
+      picker.disabled = true;
+      settingsStatus.textContent = 'Загружаем фотографию…';
+      try {
+        const data = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result).split(',')[1]);
+          reader.onerror = () => reject(new Error('Не удалось прочитать файл.'));
+          reader.readAsDataURL(file);
+        });
+        const result = await adminRequest('/api/admin/images', { method: 'POST', body: JSON.stringify({ name: file.name, data }) });
+        input.value = result.path;
+        settingsStatus.textContent = 'Фото загружено. Нажмите «Сохранить изменения», чтобы показать его на сайте.';
+      } catch (error) { settingsStatus.textContent = error.message; }
+      finally { picker.disabled = false; picker.value = ''; }
+    });
+    wrapper.append(picker);
+  }
   return wrapper;
 }
 
@@ -51,7 +78,7 @@ async function openSettings() {
   }
   for (const [name, fields] of groups) settingsGroup(name, name, fields);
   settingsGroup('Ссылки', 'links', siteEditor.attributes('a[href]').map(({ key, node }) => editableField('links', node.textContent.trim().slice(0, 72) || 'Ссылка', key, data.links[key] ?? node.getAttribute('href'))));
-  settingsGroup('Изображения', 'images', siteEditor.attributes('img[src]').map(({ key, node }) => editableField('images', node.alt || 'Изображение', key, data.images[key] ?? node.getAttribute('src'))));
+  settingsGroup('Фото: выбрать файл или указать путь', 'images', siteEditor.attributes('img[src]').map(({ key, node }) => editableField('images', node.alt || 'Изображение', key, data.images[key] ?? node.getAttribute('src'))));
   settingsGroup('Цвета оформления', 'colors', siteEditor.colors.map((name) => editableField('colors', name, name, data.colors[name] ?? getComputedStyle(document.documentElement).getPropertyValue(name).trim(), 'color')));
   settingsStatus.textContent = '';
   document.querySelector('#adminDialog').close();
@@ -90,7 +117,7 @@ document.querySelector('#settingsClose').addEventListener('click', () => setting
 document.querySelector('#settingsForm').addEventListener('submit', async (event) => {
   event.preventDefault();
   const data = { texts: {}, links: {}, images: {}, colors: {} };
-  for (const field of settingsFields.querySelectorAll('input, textarea')) data[field.dataset.group][field.name] = field.value.trim();
+  for (const field of settingsFields.querySelectorAll('[data-group]')) data[field.dataset.group][field.name] = field.value.trim();
   settingsStatus.textContent = 'Сохраняем…';
   try {
     await adminRequest('/api/admin/content', { method: 'PUT', body: JSON.stringify(data) });

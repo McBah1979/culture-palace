@@ -9,7 +9,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: ADMIN_LOGIN
-        sync: false
+        value: admin
       - key: ADMIN_PASSWORD
         sync: false
       - key: SESSION_SECRET
